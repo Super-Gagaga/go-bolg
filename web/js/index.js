@@ -160,6 +160,7 @@ function openLoginModal() {
 function closeLoginModal() {
   els.loginModal.classList.remove('visible');
   els.loginModal.setAttribute('aria-hidden', 'true');
+  document.querySelector('#btn-login')?.focus();
 }
 
 async function login(email, password) {
