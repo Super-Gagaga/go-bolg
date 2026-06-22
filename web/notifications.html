@@ -3,20 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>消息通知 - Journal</title>
+<title>消息 - Journal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/lib/phosphor-icons/index.js"></script>
+<link rel="stylesheet" href="/css/page-common.css">
 <link rel="stylesheet" href="/css/notifications.css">
 </head>
 <body>
-<header class="top-bar">
-  <a href="/" class="back-link"><i class="ph ph-arrow-left"></i>返回首页</a>
+<header class="topbar">
   <a href="/" class="site-brand">Journal</a>
-  <button class="btn-mark-all" id="mark-all" type="button">全部已读</button>
+  <nav class="topnav">
+    <a href="/"><i class="ph ph-house"></i><span>首页</span></a>
+    <a href="/following.html"><i class="ph ph-users-three"></i><span>关注</span></a>
+    <a href="/notifications.html" class="active"><i class="ph ph-bell"></i><span>消息</span></a>
+    <a href="/editor.html" class="btn primary"><i class="ph ph-pencil-simple"></i><span>写文章</span></a>
+  </nav>
 </header>
 <main class="container">
-  <div id="content-area"><div class="status-line visible">正在加载...</div></div>
+  <div class="notice-head">
+    <div>
+      <p class="label">inbox</p>
+      <h1 class="page-title">通知中心</h1>
+    </div>
+    <button class="btn" id="mark-all" type="button"><i class="ph ph-checks"></i>全部已读</button>
+  </div>
+  <div id="status" class="status-line" hidden></div>
+  <section id="notice-list" class="notice-list"></section>
 </main>
 <script src="/js/notifications.js"></script>
 </body>

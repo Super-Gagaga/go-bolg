@@ -124,6 +124,29 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	app.Success(c, result)
 }
 
+func (h *ArticleHandler) MyArticles(c *gin.Context) {
+	userID, ok := middleware.CurrentUserID(c)
+	if !ok {
+		app.Error(c, http.StatusUnauthorized, errcode.Unauthorized, "")
+		return
+	}
+	req := service.ListArticleReq{
+		Page:       queryInt(c, "page", 1),
+		PageSize:   queryInt(c, "page_size", 10),
+		Status:     c.Query("status"),
+		CategoryID: queryInt64(c, "category_id", 0),
+		TagID:      queryInt64(c, "tag_id", 0),
+		Keyword:    c.Query("keyword"),
+	}
+
+	result, err := h.articles.ListUserArticles(c.Request.Context(), userID, req)
+	if err != nil {
+		writeArticleError(c, err)
+		return
+	}
+	app.Success(c, result)
+}
+
 func (h *ArticleHandler) ChangeStatus(c *gin.Context) {
 	userID, ok := middleware.CurrentUserID(c)
 	if !ok {

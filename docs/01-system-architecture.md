@@ -211,17 +211,28 @@ Client Request
 
 ```
 功能：
-├── POST   /api/v1/articles             创建文章
-├── PUT    /api/v1/articles/:id         更新文章
-├── DELETE /api/v1/articles/:id         删除文章 (软删除)
-├── GET    /api/v1/articles/:id         文章详情
-├── GET    /api/v1/articles             文章列表 (分页+筛选)
-├── PATCH  /api/v1/articles/:id/status  变更状态 (草稿/发布)
-└── POST   /api/v1/articles/:id/upload  文章内图片上传
+├── POST   /api/v1/articles                   创建文章（草稿/直接提交审核）
+├── PUT    /api/v1/articles/:id               更新文章
+├── DELETE /api/v1/articles/:id               删除文章 (软删除)
+├── GET    /api/v1/articles/:id               文章详情
+├── GET    /api/v1/articles                   文章列表 (分页+筛选，仅已发布)
+├── PATCH  /api/v1/articles/:id/status        变更状态 (作者)
+│            draft → pending_review（提交审核）
+│            draft/pending_review → draft（撤回）
+│            published → archived（归档）
+└── POST   /api/v1/articles/:id/upload        文章内图片上传
+
+管理员审核 (Admin)：
+├── GET    /api/v1/admin/articles/pending     待审核文章列表
+├── POST   /api/v1/admin/articles/:id/approve  通过审核 → published
+└── POST   /api/v1/admin/articles/:id/reject   驳回 → draft（附带驳回原因）
 ```
 
 **关键设计：**
-- 文章状态机：`draft → published → archived`
+- 文章状态机：`draft → pending_review → published ↔ archived`（驳回则退回 `draft`）
+- 用户发布文章时，状态变为 `pending_review` 而非 `published`，等待管理员审核
+- 审核通过后文章变为 `published` 才对公众可见
+- 驳回时需填写 `review_comment` 告知作者原因，状态回到 `draft` 供作者修改后重新提交
 - Markdown 渲染（服务端存原文 + 渲染后的 HTML）
 - 分类 & 标签多对多关系
 - 软删除（deleted_at）
@@ -266,6 +277,39 @@ Client Request
 ├── POST   /api/v1/categories          创建分类 (管理员)
 ├── GET    /api/v1/tags                标签列表
 └── GET    /api/v1/tags?keyword=xxx    标签搜索
+```
+
+### 4.6 管理员模块 (Admin)
+
+```
+功能（全部需要 admin 角色）：
+├── GET    /api/v1/admin/dashboard           仪表盘统计
+├── GET    /api/v1/admin/articles/pending    待审核文章列表
+├── POST   /api/v1/admin/articles/:id/approve  通过审核
+├── POST   /api/v1/admin/articles/:id/reject   驳回文章
+├── GET    /api/v1/admin/articles             所有文章列表
+├── DELETE /api/v1/admin/articles/:id         强制删除文章
+├── GET    /api/v1/admin/comments             所有评论列表
+├── DELETE /api/v1/admin/comments/:id         强制删除评论
+├── GET    /api/v1/admin/users                用户列表
+├── PATCH  /api/v1/admin/users/:id/status     封禁/解封用户
+├── PATCH  /api/v1/admin/users/:id/role       变更用户角色
+├── GET    /api/v1/admin/audit-logs           审计日志
+├── POST   /api/v1/admin/categories           创建分类
+├── PUT    /api/v1/admin/categories/:id       更新分类
+├── DELETE /api/v1/admin/categories/:id       删除分类
+├── POST   /api/v1/admin/tags                 创建标签
+├── PUT    /api/v1/admin/tags/:id             更新标签
+└── DELETE /api/v1/admin/tags/:id             删除标签
+```
+
+**审核流程：**
+1. 用户将文章状态设为 `published` → 后端自动转为 `pending_review`
+2. 管理员在后台看到待审核列表，查看文章内容
+3. 通过 → 文章状态变为 `published`，公开可见，通知作者"审核通过"
+4. 驳回 → 文章状态回到 `draft`，填写 `review_comment` 驳回原因，通知作者"需修改后重新提交"
+5. 作者修改后可重新提交审核
+
 ```
 
 ---
@@ -388,7 +432,8 @@ CREATE TABLE articles (
     content_html TEXT         NOT NULL,
     summary      VARCHAR(500),
     cover_image  VARCHAR(500),
-    status       VARCHAR(20)  NOT NULL DEFAULT 'draft',  -- draft | published | archived
+    status       VARCHAR(20)  NOT NULL DEFAULT 'draft',  -- draft | pending_review | published | archived
+    review_comment VARCHAR(500),                              -- 审核驳回原因
     view_count   BIGINT       NOT NULL DEFAULT 0,
     user_id      BIGINT       NOT NULL,
     category_id  BIGINT,
@@ -463,7 +508,7 @@ CREATE TABLE follows (
 CREATE TABLE notifications (
     id         BIGINT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id    BIGINT      NOT NULL,
-    type       VARCHAR(30) NOT NULL,  -- like | comment | follow | system
+    type       VARCHAR(30) NOT NULL,  -- like | comment | follow | system | review_approved | review_rejected
     content    JSON        NOT NULL,
     is_read    BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,

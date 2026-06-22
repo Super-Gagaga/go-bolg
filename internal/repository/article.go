@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/yourname/go-bolg/internal/model"
 	"gorm.io/gorm"
@@ -19,6 +20,15 @@ type ListArticleFilter struct {
 	TagID      int64
 	Keyword    string
 	UserID     int64
+}
+
+type AdminArticleFilter struct {
+	Keyword    string
+	Status     string
+	UserID     int64
+	CategoryID int64
+	DateFrom   string
+	DateTo     string
 }
 
 func NewArticleRepository(db *gorm.DB) *ArticleRepository {
@@ -176,7 +186,11 @@ func (r *ArticleRepository) ChangeStatus(id int64, status string) error {
 		if article.Status == status {
 			return nil
 		}
-		if err := tx.Model(&model.Article{}).Where("id = ?", id).Update("status", status).Error; err != nil {
+		updates := map[string]interface{}{"status": status}
+		if status == model.ArticleStatusPublished {
+			updates["review_comment"] = nil
+		}
+		if err := tx.Model(&model.Article{}).Where("id = ?", id).Updates(updates).Error; err != nil {
 			return err
 		}
 		switch {
@@ -187,6 +201,88 @@ func (r *ArticleRepository) ChangeStatus(id int64, status string) error {
 		default:
 			return nil
 		}
+	})
+}
+
+func (r *ArticleRepository) ChangeStatusWithReviewComment(id int64, status string, reviewComment *string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var article model.Article
+		if err := tx.Select("id", "user_id", "status").First(&article, id).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.Article{}).Where("id = ?", id).
+			Updates(map[string]interface{}{"status": status, "review_comment": reviewComment}).Error; err != nil {
+			return err
+		}
+		switch {
+		case article.Status != model.ArticleStatusPublished && status == model.ArticleStatusPublished:
+			return tx.Model(&model.User{}).Where("id = ?", article.UserID).UpdateColumn("article_count", gorm.Expr("article_count + ?", 1)).Error
+		case article.Status == model.ArticleStatusPublished && status != model.ArticleStatusPublished:
+			return tx.Model(&model.User{}).Where("id = ? AND article_count > 0", article.UserID).UpdateColumn("article_count", gorm.Expr("article_count - ?", 1)).Error
+		default:
+			return nil
+		}
+	})
+}
+
+func (r *ArticleRepository) ListPending(page, pageSize int, keyword string) ([]model.Article, int64, error) {
+	return r.ListAll(page, pageSize, AdminArticleFilter{
+		Status:  model.ArticleStatusPendingReview,
+		Keyword: keyword,
+	}, "created_at ASC")
+}
+
+func (r *ArticleRepository) ListAll(page, pageSize int, filter AdminArticleFilter, order ...string) ([]model.Article, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	sortOrder := "created_at DESC"
+	if len(order) > 0 && order[0] != "" {
+		sortOrder = order[0]
+	}
+
+	var total int64
+	if err := applyAdminArticleFilters(r.db.Model(&model.Article{}), filter).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var articles []model.Article
+	err := applyAdminArticleFilters(r.db.Model(&model.Article{}), filter).
+		Preload("User").
+		Preload("Category").
+		Preload("Tags").
+		Order(sortOrder).
+		Limit(pageSize).
+		Offset((page - 1) * pageSize).
+		Find(&articles).Error
+	return articles, total, err
+}
+
+func (r *ArticleRepository) ForceDelete(id int64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var article model.Article
+		if err := tx.Unscoped().Select("id", "user_id", "status").First(&article, id).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&article).Association("Tags").Clear(); err != nil {
+			return err
+		}
+		if err := tx.Unscoped().Delete(&article).Error; err != nil {
+			return err
+		}
+		if article.Status == model.ArticleStatusPublished {
+			return tx.Model(&model.User{}).
+				Where("id = ? AND article_count > 0", article.UserID).
+				UpdateColumn("article_count", gorm.Expr("article_count - ?", 1)).
+				Error
+		}
+		return nil
 	})
 }
 
@@ -244,6 +340,29 @@ func applyArticleFilters(query *gorm.DB, filter ListArticleFilter) *gorm.DB {
 	if filter.TagID > 0 {
 		query = query.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
 			Where("article_tags.tag_id = ?", filter.TagID)
+	}
+	return query
+}
+
+func applyAdminArticleFilters(query *gorm.DB, filter AdminArticleFilter) *gorm.DB {
+	if filter.Status != "" {
+		query = query.Where("articles.status = ?", filter.Status)
+	}
+	if filter.CategoryID > 0 {
+		query = query.Where("articles.category_id = ?", filter.CategoryID)
+	}
+	if filter.UserID > 0 {
+		query = query.Where("articles.user_id = ?", filter.UserID)
+	}
+	if strings.TrimSpace(filter.Keyword) != "" {
+		like := "%" + strings.TrimSpace(filter.Keyword) + "%"
+		query = query.Where("articles.title LIKE ? OR articles.content LIKE ?", like, like)
+	}
+	if strings.TrimSpace(filter.DateFrom) != "" {
+		query = query.Where("articles.created_at >= ?", strings.TrimSpace(filter.DateFrom))
+	}
+	if strings.TrimSpace(filter.DateTo) != "" {
+		query = query.Where("articles.created_at <= ?", strings.TrimSpace(filter.DateTo))
 	}
 	return query
 }

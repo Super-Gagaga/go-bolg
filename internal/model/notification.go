@@ -3,11 +3,13 @@ package model
 import "time"
 
 const (
-	NotificationTypeComment = "comment"
-	NotificationTypeReply   = "reply"
-	NotificationTypeLike    = "like"
-	NotificationTypeFollow  = "follow"
-	NotificationTypeSystem  = "system"
+	NotificationTypeComment        = "comment"
+	NotificationTypeReply          = "reply"
+	NotificationTypeLike           = "like"
+	NotificationTypeFollow         = "follow"
+	NotificationTypeSystem         = "system"
+	NotificationTypeReviewApproved = "review_approved"
+	NotificationTypeReviewRejected = "review_rejected"
 )
 
 type Notification struct {

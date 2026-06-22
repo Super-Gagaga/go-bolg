@@ -44,14 +44,14 @@ INSERT INTO users (
 ) VALUES
     (
         1001, 'admin', 'admin@example.com',
-        '$2a$10$KIXQXfl6ZVIwkV3GEPvqKuoeUry6RFSP4ePLiEhlG8cu35fATVmoa',
+        '$2b$10$zXc2E/7tSgBpze6cTb6JZ.oZCVuL64xJAhlJBOg.qEhMvhPJ2q3N2',
         'https://api.dicebear.com/7.x/initials/svg?seed=Admin',
         '平台管理员，负责内容发布审核。', 'admin', 'active',
         1, 1, 2, '2026-06-15 00:00:00.000', '2026-06-22 02:14:43.000'
     ),
     (
         1002, 'alice', 'alice@example.com',
-        '$2a$10$KIXQXfl6ZVIwkV3GEPvqKuoeUry6RFSP4ePLiEhlG8cu35fATVmoa',
+        '$2b$10$zXc2E/7tSgBpze6cTb6JZ.oZCVuL64xJAhlJBOg.qEhMvhPJ2q3N2',
         'https://api.dicebear.com/7.x/initials/svg?seed=Alice',
         'Go 后端工程师，专注于 API 与服务设计。', 'user', 'active',
         2, 3, 2, '2026-06-15 02:18:49.000', '2026-06-22 21:56:40.000'

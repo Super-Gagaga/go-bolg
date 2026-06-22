@@ -1,66 +1,38 @@
-const API_BASE = '/api/v1';
-let currentMode = 'following';
-const pageSize = 20;
-
-function token() { return localStorage.getItem('jwt_token'); }
-function escapeHTML(value = '') { return String(value).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch])); }
-function avatarFor(user) { return (user && user.avatar) || `https://picsum.photos/seed/${encodeURIComponent((user && user.username) || 'user')}/100/100`; }
-
-function showAuthPrompt() {
-  document.querySelector('#content-area').innerHTML = `
-    <div class="auth-prompt">
-      <h2>需要登录</h2>
-      <p>请登录后查看关注列表。</p>
-      <a class="btn-login" href="/"><i class="ph ph-sign-in"></i>返回首页登录</a>
-    </div>`;
-}
-
-async function getJSON(path, params = {}) {
-  const url = new URL(API_BASE + path, location.origin);
-  Object.entries(params).forEach(([k, v]) => { if (v !== '' && v !== null && v !== undefined) url.searchParams.set(k, v); });
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token()}` } });
-  if (res.status === 401) { showAuthPrompt(); return null; }
+const API = '/api/v1';
+let tab = 'following';
+const token = () => localStorage.getItem('jwt_token');
+const $ = s => document.querySelector(s);
+function esc(v = '') { return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function avatar(u = {}) { return u.avatar || `https://picsum.photos/seed/${encodeURIComponent(u.username || u.id || 'user')}/100/100`; }
+function show(msg) { $('#status').textContent = msg; $('#status').hidden = !msg; }
+async function api(path, options = {}) {
+  if (!token()) throw new Error('请先登录后查看关注关系。');
+  const res = await fetch(API + path, { ...options, headers: { Authorization: `Bearer ${token()}`, ...(options.headers || {}) } });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.code !== 0) throw new Error(body.message || `请求失败：${res.status}`);
+  if (!res.ok || body.code !== 0) throw new Error(body.message || '请求失败');
   return body.data;
 }
-
-async function loadUsers() {
-  const area = document.querySelector('#content-area');
-  area.innerHTML = '<div class="status-line visible">正在加载...</div>';
-  try {
-    const endpoint = currentMode === 'following' ? '/user/following' : '/user/followers';
-    const data = await getJSON(endpoint, { page: 1, page_size: pageSize });
-    if (!data) return;
-    const users = data.list || [];
-    if (!users.length) {
-      area.innerHTML = `<div class="empty">${currentMode === 'following' ? '还没有关注任何人' : '还没有粉丝'}</div>`;
-      return;
-    }
-    const title = currentMode === 'following' ? '我关注的' : '关注我的';
-    area.innerHTML = `<h1 class="page-title">${title} (${(data.pagination && data.pagination.total) || users.length})</h1>` + users.map(item => {
-      const user = item.followee || item.follower || item;
-      return `<div class="user-card">
-        <img src="${escapeHTML(avatarFor(user))}" alt="" class="user-avatar">
-        <div class="user-info">
-          <div class="user-name">${escapeHTML(user.username || '用户')}</div>
-          <div class="user-bio">${escapeHTML(user.bio || '')}</div>
-          <div class="user-stats">${user.article_count || 0} 篇文章 · ${user.follower_count || 0} 粉丝</div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch (error) {
-    area.innerHTML = `<div class="empty">${escapeHTML(error.message)}</div>`;
-  }
+function pickUser(item) { return item.followee || item.follower || item.user || item; }
+function render(result) {
+  const list = result.list || [];
+  if (!list.length) { $('#follow-list').innerHTML = `<div class="empty">${tab === 'following' ? '你还没有关注作者。' : '暂时还没有人关注你。'}</div>`; return; }
+  $('#follow-list').innerHTML = list.map(item => {
+    const u = pickUser(item);
+    return `<article class="person-card">
+      <div class="person-head"><img class="avatar" src="${esc(avatar(u))}" alt=""><div><div class="person-name">${esc(u.username || '用户')}</div><div class="tiny">${esc(u.email || '')}</div></div></div>
+      <p class="person-bio">${esc(u.bio || '这个作者还没有填写简介。')}</p>
+      <div class="person-stats"><span>${u.article_count || 0} articles</span><span>${u.follower_count || 0} followers</span></div>
+    </article>`;
+  }).join('');
 }
-
-document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach(item => item.classList.remove('active'));
-  tab.classList.add('active');
-  currentMode = tab.dataset.mode;
-  loadUsers();
+async function load() {
+  show('正在加载...');
+  try { render(await api(`/user/${tab}?page=1&page_size=50`)); show(''); }
+  catch (e) { show(e.message); $('#follow-list').innerHTML = ''; }
+}
+document.querySelectorAll('.follow-tab').forEach(btn => btn.addEventListener('click', () => {
+  tab = btn.dataset.tab;
+  document.querySelectorAll('.follow-tab').forEach(x => x.classList.toggle('active', x === btn));
+  load();
 }));
-
-const params = new URLSearchParams(location.hash.slice(1) || location.search);
-if (params.get('token')) localStorage.setItem('jwt_token', params.get('token'));
-if (!token()) showAuthPrompt(); else loadUsers();
+load();

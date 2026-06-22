@@ -6,6 +6,7 @@ const state = {
   keyword: '',
   tagId: '',
   categoryId: '',
+  sort: 'hot',
   articles: [],
   pagination: { total: 0, total_pages: 0 },
   authMode: 'login'
@@ -260,8 +261,12 @@ function renderCategories(categories) {
     item.addEventListener('click', event => {
       event.preventDefault();
       state.categoryId = item.dataset.categoryId || '';
+      state.sort = '';
+      state.tagId = '';
+      state.keyword = '';
       state.page = 1;
       state.articles = [];
+      setActiveNav('', state.categoryId);
       document.querySelectorAll('.feed-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.categoryId === state.categoryId));
       els.title.textContent = state.categoryId ? item.textContent.trim() : '热门推荐';
       loadArticles();
@@ -278,9 +283,12 @@ async function renderTopics() {
     item.addEventListener('click', event => {
       event.preventDefault();
       state.tagId = item.dataset.tagId;
+      state.sort = '';
+      state.categoryId = '';
       state.keyword = '';
       state.page = 1;
       state.articles = [];
+      setActiveNav('', '');
       els.title.textContent = `话题：${item.textContent.trim()}`;
       loadArticles();
     });
@@ -325,7 +333,8 @@ async function loadArticles(append = false) {
       status: 'published',
       category_id: state.categoryId,
       tag_id: state.tagId,
-      keyword: state.keyword
+      keyword: state.keyword,
+      sort: state.sort !== 'favorites' ? state.sort : 'hot'
     });
     state.pagination = result.pagination || state.pagination;
     state.articles = append ? state.articles.concat(result.list || []) : (result.list || []);
@@ -333,6 +342,49 @@ async function loadArticles(append = false) {
     els.loadMore.style.visibility = state.page < (state.pagination.total_pages || 0) ? 'visible' : 'hidden';
   } catch (error) {
     showStatus(error.message);
+  }
+}
+
+async function loadFavorites(append = false) {
+  if (!token()) {
+    openLoginModal();
+    return;
+  }
+  showStatus('正在加载收藏...');
+  try {
+    const res = await fetch(`${API_BASE}/user/favorites?page=${state.page}&page_size=${state.pageSize}`, {
+      headers: { Authorization: `Bearer ${token()}` }
+    });
+    if (res.status === 401) {
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('refresh_token');
+      renderLoggedOut();
+      showStatus('请先登录后再查看收藏');
+      return;
+    }
+    const body = await res.json();
+    if (body.code !== 0) throw new Error(body.message || '获取收藏失败');
+    const data = body.data;
+    state.pagination = data.pagination || state.pagination;
+    const articles = (data.list || []).map(item => item.article).filter(Boolean);
+    state.articles = append ? state.articles.concat(articles) : articles;
+    renderArticles();
+    els.loadMore.style.visibility = state.page < (state.pagination.total_pages || 0) ? 'visible' : 'hidden';
+    if (!articles.length && !append) showStatus('还没有收藏任何文章');
+  } catch (error) {
+    showStatus(error.message);
+  }
+}
+
+function setActiveNav(sort, categoryId) {
+  document.querySelectorAll('.left-nav .nav-list li').forEach(li => li.classList.remove('active'));
+  if (sort) {
+    const link = document.querySelector(`.left-nav [data-sort="${sort}"]`);
+    if (link) link.parentElement.classList.add('active');
+  }
+  if (categoryId) {
+    const link = document.querySelector(`.left-nav [data-category-id="${categoryId}"]`);
+    if (link) link.parentElement.classList.add('active');
   }
 }
 
@@ -344,12 +396,36 @@ async function bootstrap() {
   loadArticles();
 }
 
+/* Left-nav sort links */
+document.querySelector('.left-nav').addEventListener('click', event => {
+  const sortLink = event.target.closest('[data-sort]');
+  if (!sortLink) return;
+  event.preventDefault();
+  const sort = sortLink.dataset.sort;
+  state.sort = sort;
+  state.categoryId = '';
+  state.tagId = '';
+  state.keyword = '';
+  state.page = 1;
+  state.articles = [];
+  setActiveNav(sort, '');
+  els.title.textContent = { hot: '热门推荐', latest: '最新文章', trend: '趋势文章', favorites: '我的收藏' }[sort] || '热门推荐';
+  if (sort === 'favorites') {
+    loadFavorites();
+  } else {
+    loadArticles();
+  }
+});
+
 document.querySelector('#search-form').addEventListener('submit', event => {
   event.preventDefault();
   state.keyword = els.searchInput.value.trim();
   state.tagId = '';
+  state.categoryId = '';
+  state.sort = state.keyword ? '' : 'hot';
   state.page = 1;
   state.articles = [];
+  setActiveNav(state.sort, '');
   els.title.textContent = state.keyword ? `搜索：${state.keyword}` : '热门推荐';
   loadArticles();
 });
@@ -357,7 +433,11 @@ document.querySelector('#search-form').addEventListener('submit', event => {
 els.loadMore.addEventListener('click', () => {
   if (state.page < (state.pagination.total_pages || 0)) {
     state.page += 1;
-    loadArticles(true);
+    if (state.sort === 'favorites') {
+      loadFavorites(true);
+    } else {
+      loadArticles(true);
+    }
   }
 });
 

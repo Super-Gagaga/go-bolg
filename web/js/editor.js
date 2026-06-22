@@ -1,181 +1,92 @@
-const API_BASE = '/api/v1';
-let editMode = false;
-let editArticleId = null;
-let selectedTags = new Set();
-let currentStatus = 'draft';
-
-function escapeHTML(value = '') {
-  return String(value).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
-}
-
-function token() {
-  return localStorage.getItem('jwt_token');
-}
-
-function toast(message, error = false) {
-  const el = document.querySelector('#toast');
-  el.textContent = message;
-  el.className = `toast${error ? ' error' : ''} show`;
-  setTimeout(() => el.classList.remove('show'), 2200);
-}
-
-function showAuthPrompt() {
-  document.querySelector('#status-line').classList.add('visible');
-  document.querySelector('#status-line').innerHTML = '需要登录，请<a href="/">返回首页</a>登录后再写文章。';
-  document.querySelector('#editor-content').hidden = true;
-}
-
-async function api(path, opts = {}) {
-  const headers = {};
-  if (token()) headers.Authorization = `Bearer ${token()}`;
-  if (!opts.isForm) headers['Content-Type'] = 'application/json';
-  const url = new URL(API_BASE + path, location.origin);
-  Object.entries(opts.params || {}).forEach(([key, value]) => {
-    if (value !== '' && value !== null && value !== undefined) url.searchParams.set(key, value);
-  });
-  const res = await fetch(url, {
-    method: opts.method || 'GET',
-    headers,
-    body: opts.body ? (opts.isForm ? opts.body : JSON.stringify(opts.body)) : undefined
-  });
-  if (res.status === 401) {
-    showAuthPrompt();
-    return null;
-  }
+const API = '/api/v1';
+const token = () => localStorage.getItem('jwt_token');
+const $ = s => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+let editingID = params.get('id');
+function esc(v = '') { return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function show(msg) { $('#status').textContent = msg; $('#status').hidden = !msg; }
+async function api(path, options = {}) {
+  if (!token()) throw new Error('请先登录后写作。');
+  const headers = { Authorization: `Bearer ${token()}`, ...(options.headers || {}) };
+  if (options.body && !(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+  const res = await fetch(API + path, { ...options, headers });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.code !== 0) throw new Error(body.message || `请求失败：${res.status}`);
+  if (!res.ok || body.code !== 0) throw new Error(body.message || `请求失败 ${res.status}`);
   return body.data;
 }
-
-async function loadMeta() {
+async function loadOptions() {
   const [categories, tags] = await Promise.all([
-    api('/categories').catch(() => []),
-    api('/tags').catch(() => [])
+    fetch(API + '/categories').then(r => r.json()).then(b => b.data || []).catch(() => []),
+    fetch(API + '/tags').then(r => r.json()).then(b => b.data || []).catch(() => [])
   ]);
-  const category = document.querySelector('#category');
-  category.innerHTML = '<option value="">无专题</option>' + (categories || []).map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
-  document.querySelector('#tag-chips').innerHTML = (tags || []).map(t => `<button class="tag-chip" type="button" data-tag-id="${t.id}">${escapeHTML(t.name)}</button>`).join('');
-  document.querySelectorAll('.tag-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const id = chip.dataset.tagId;
-      if (selectedTags.has(id)) selectedTags.delete(id);
-      else selectedTags.add(id);
-      chip.classList.toggle('selected', selectedTags.has(id));
-    });
-  });
+  $('#category').innerHTML = '<option value="">不选择分类</option>' + categories.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  $('#tags').innerHTML = tags.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
 }
-
-async function loadArticle(id) {
-  const article = await api(`/articles/${id}`);
-  if (!article) return;
-  document.querySelector('#title').value = article.title || '';
-  document.querySelector('#content').value = article.content || '';
-  document.querySelector('#cover-image').value = article.cover_image || '';
-  if (article.cover_image) {
-    const img = document.querySelector('#cover-preview');
-    img.src = article.cover_image;
-    img.classList.add('visible');
-  }
-  if (article.category_id) document.querySelector('#category').value = article.category_id;
-  currentStatus = article.status || 'draft';
-  document.querySelectorAll('.status-option').forEach(btn => btn.classList.toggle('selected', btn.dataset.status === currentStatus));
-  (article.tags || []).forEach(tag => selectedTags.add(String(tag.id)));
-  document.querySelectorAll('.tag-chip').forEach(chip => chip.classList.toggle('selected', selectedTags.has(chip.dataset.tagId)));
-  document.querySelector('#btn-save').innerHTML = '<i class="ph ph-floppy-disk"></i>更新';
-}
-
-async function saveArticle() {
-  const title = document.querySelector('#title').value.trim();
-  const content = document.querySelector('#content').value.trim();
-  if (!title || !content) {
-    toast('标题和内容不能为空', true);
-    return;
-  }
-  const categoryId = document.querySelector('#category').value;
-  const body = {
-    title,
-    content,
-    category_id: categoryId ? Number(categoryId) : null,
-    tag_ids: Array.from(selectedTags).map(Number),
-    cover_image: document.querySelector('#cover-image').value.trim(),
-    status: currentStatus
+function payload(status) {
+  const tagIDs = Array.from($('#tags').selectedOptions).map(o => Number(o.value));
+  const category = $('#category').value;
+  return {
+    title: $('#title').value.trim(),
+    content: $('#content').value,
+    category_id: category ? Number(category) : null,
+    tag_ids: tagIDs,
+    cover_image: $('#cover').value.trim(),
+    status
   };
-  const result = await api(editMode ? `/articles/${editArticleId}` : '/articles', {
-    method: editMode ? 'PUT' : 'POST',
-    body
-  });
-  if (!result) return;
-  editMode = true;
-  editArticleId = result.id;
-  history.replaceState({}, '', `/editor.html?id=${result.id}`);
-  toast('文章已保存');
 }
-
-async function uploadImage(file) {
-  const form = new FormData();
-  form.append('image', file);
-  const data = await api('/articles/upload', { method: 'POST', body: form, isForm: true });
-  return data && data.url;
-}
-
-document.querySelector('#btn-save').addEventListener('click', () => saveArticle().catch(e => toast(e.message, true)));
-document.querySelector('#btn-preview').addEventListener('click', () => {
-  const title = document.querySelector('#title').value.trim() || '未命名';
-  const content = escapeHTML(document.querySelector('#content').value).replace(/\n/g, '<br>');
-  const win = window.open('', '_preview');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>预览 - ${escapeHTML(title)}</title></head><body style="max-width:820px;margin:40px auto;font-family:sans-serif;line-height:1.8"><h1>${escapeHTML(title)}</h1>${content}</body></html>`);
-});
-document.querySelector('#btn-upload').addEventListener('click', () => document.querySelector('#file-input').click());
-document.querySelector('#file-input').addEventListener('change', async event => {
-  const file = event.target.files[0];
-  if (!file) return;
+async function save(status) {
+  const data = payload(status);
+  if (!data.title || !data.content.trim()) { show('标题和正文都需要填写。'); return; }
+  show(status === 'published' ? '正在提交审核...' : '正在保存草稿...');
   try {
-    const url = await uploadImage(file);
-    if (url) {
-      document.querySelector('#cover-image').value = url;
-      const img = document.querySelector('#cover-preview');
-      img.src = url;
-      img.classList.add('visible');
-    }
-  } catch (error) {
-    toast(error.message, true);
-  }
-});
-document.querySelector('#cover-image').addEventListener('input', event => {
-  const img = document.querySelector('#cover-preview');
-  if (event.target.value.trim()) {
-    img.src = event.target.value.trim();
-    img.classList.add('visible');
-  } else {
-    img.classList.remove('visible');
-  }
-});
-document.querySelectorAll('.status-option').forEach(btn => btn.addEventListener('click', () => {
-  document.querySelectorAll('.status-option').forEach(item => item.classList.remove('selected'));
-  btn.classList.add('selected');
-  currentStatus = btn.dataset.status;
-}));
-document.addEventListener('keydown', event => {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-    event.preventDefault();
-    saveArticle().catch(e => toast(e.message, true));
-  }
-});
-
+    const path = editingID ? `/articles/${editingID}` : '/articles';
+    const method = editingID ? 'PUT' : 'POST';
+    const article = await api(path, { method, body: JSON.stringify(data) });
+    editingID = article.id;
+    history.replaceState(null, '', `/editor.html?id=${editingID}`);
+    show(status === 'published' ? '已提交审核。' : '草稿已保存。');
+    loadMine();
+  } catch (e) { show(e.message); }
+}
+async function loadArticle() {
+  if (!editingID) return;
+  show('正在载入文章...');
+  try {
+    const a = await api(`/articles/${editingID}`);
+    $('#title').value = a.title || '';
+    $('#content').value = a.content || '';
+    $('#cover').value = a.cover_image || '';
+    if (a.category_id) $('#category').value = String(a.category_id);
+    const tagSet = new Set((a.tags || []).map(t => String(t.id)));
+    Array.from($('#tags').options).forEach(o => { o.selected = tagSet.has(o.value); });
+    show(a.review_comment ? `驳回原因：${a.review_comment}` : '');
+  } catch (e) { show(e.message); }
+}
+function statusChip(s) {
+  const map = { draft:'草稿', pending_review:'待审核', published:'已发布', archived:'已归档' };
+  const color = s === 'published' ? 'green' : s === 'pending_review' ? 'orange' : '';
+  return `<span class="chip ${color}">${map[s] || s}</span>`;
+}
+async function loadMine() {
+  try {
+    const st = $('#article-status').value;
+    const data = await api(`/user/articles?page=1&page_size=30${st ? `&status=${encodeURIComponent(st)}` : ''}`);
+    const list = data.list || [];
+    $('#my-articles').innerHTML = list.length ? list.map(a => `<article class="my-article" data-id="${a.id}">
+      <div class="my-article-title">${esc(a.title)}</div>
+      <div class="my-article-meta">${statusChip(a.status)}<span class="tiny">${new Date(a.updated_at || a.created_at).toLocaleDateString('zh-CN')}</span></div>
+      ${a.review_comment ? `<div class="tiny">驳回：${esc(a.review_comment)}</div>` : ''}
+    </article>`).join('') : '<div class="empty">还没有文章。</div>';
+    document.querySelectorAll('.my-article').forEach(el => el.onclick = () => location.href = `/editor.html?id=${el.dataset.id}`);
+  } catch (e) { $('#my-articles').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+$('#save-draft').onclick = () => save('draft');
+$('#submit-review').onclick = () => save('published');
+$('#refresh-mine').onclick = loadMine;
+$('#article-status').onchange = loadMine;
 (async function init() {
-  const params = new URLSearchParams(location.hash.slice(1) || location.search);
-  if (params.get('token')) localStorage.setItem('jwt_token', params.get('token'));
-  if (!token()) {
-    showAuthPrompt();
-    return;
-  }
-  document.querySelector('#editor-content').hidden = false;
-  document.querySelector('#status-line').classList.remove('visible');
-  await loadMeta();
-  const id = params.get('id');
-  if (id) {
-    editMode = true;
-    editArticleId = Number(id);
-    await loadArticle(id);
-  }
-})().catch(error => toast(error.message, true));
+  if (!token()) { show('请先从首页登录，再进入编辑器。'); return; }
+  await loadOptions();
+  await loadArticle();
+  await loadMine();
+})();

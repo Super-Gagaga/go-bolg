@@ -36,6 +36,24 @@ func (s *NotificationService) SendNotification(ctx context.Context, userID int64
 	}()
 }
 
+func (s *NotificationService) NotifyReviewApproved(ctx context.Context, userID int64, articleTitle, articleSlug string) {
+	s.SendNotification(ctx, userID, model.NotificationTypeReviewApproved, map[string]interface{}{
+		"type":          model.NotificationTypeReviewApproved,
+		"title":         "文章审核通过",
+		"article_title": articleTitle,
+		"article_slug":  articleSlug,
+	})
+}
+
+func (s *NotificationService) NotifyReviewRejected(ctx context.Context, userID int64, articleTitle, reason string) {
+	s.SendNotification(ctx, userID, model.NotificationTypeReviewRejected, map[string]interface{}{
+		"type":          model.NotificationTypeReviewRejected,
+		"title":         "文章审核未通过",
+		"article_title": articleTitle,
+		"reason":        reason,
+	})
+}
+
 func (s *NotificationService) GetNotifications(ctx context.Context, userID int64, page, pageSize int) (*model.PageResult, error) {
 	notifications, total, err := s.notifications.ListByUser(userID, page, pageSize)
 	if err != nil {

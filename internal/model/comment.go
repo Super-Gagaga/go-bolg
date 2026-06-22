@@ -13,6 +13,7 @@ type Comment struct {
 	UserID    int64          `gorm:"not null;index" json:"user_id"`
 	ParentID  *int64         `gorm:"index" json:"parent_id"`
 	User      User           `json:"user,omitempty"`
+	Article   Article        `json:"article,omitempty"`
 	CreatedAt time.Time      `json:"created_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }

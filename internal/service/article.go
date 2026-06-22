@@ -64,6 +64,7 @@ type ListArticleReq struct {
 	TagID      int64
 	Keyword    string
 	UserID     int64
+	OwnerOnly  bool
 }
 
 type ChangeArticleStatusReq struct {
@@ -93,6 +94,7 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID int64, req Cr
 	if !validArticleStatus(req.Status) {
 		return nil, ErrInvalidStatus
 	}
+	req.Status = normalizeAuthorStatus(req.Status)
 
 	if err := s.ensureCategory(req.CategoryID); err != nil {
 		return nil, err
@@ -165,7 +167,10 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, userID, articleID in
 		if !validArticleStatus(*req.Status) {
 			return nil, ErrInvalidStatus
 		}
-		article.Status = *req.Status
+		article.Status = normalizeAuthorStatus(*req.Status)
+		if article.Status == model.ArticleStatusPendingReview {
+			article.ReviewComment = nil
+		}
 	}
 
 	tags, err := s.loadTags(req.TagIDs)
@@ -212,6 +217,9 @@ func (s *ArticleService) GetArticle(ctx context.Context, articleID int64) (*mode
 }
 
 func (s *ArticleService) ListArticles(ctx context.Context, req ListArticleReq) (*model.PageResult, error) {
+	if !req.OwnerOnly {
+		req.Status = model.ArticleStatusPublished
+	}
 	if cached, ok := s.getArticleListCache(ctx, req); ok {
 		return cached, nil
 	}
@@ -239,14 +247,44 @@ func (s *ArticleService) ChangeStatus(ctx context.Context, userID, articleID int
 	if !validArticleStatus(status) {
 		return ErrInvalidStatus
 	}
-	if _, err := s.requireAuthor(userID, articleID); err != nil {
+	article, err := s.requireAuthor(userID, articleID)
+	if err != nil {
 		return err
 	}
-	if err := s.articles.ChangeStatus(articleID, status); err != nil {
+
+	nextStatus := status
+	switch status {
+	case model.ArticleStatusPublished:
+		nextStatus = model.ArticleStatusPendingReview
+	case model.ArticleStatusDraft:
+		if article.Status != model.ArticleStatusPendingReview && article.Status != model.ArticleStatusDraft {
+			return ErrInvalidStatus
+		}
+	case model.ArticleStatusArchived:
+		if article.Status != model.ArticleStatusPublished {
+			return ErrInvalidStatus
+		}
+	}
+
+	if err := s.articles.ChangeStatusWithReviewComment(articleID, nextStatus, nil); err != nil {
 		return err
 	}
 	s.invalidateArticleCache(ctx, articleID)
 	return nil
+}
+
+func (s *ArticleService) ListUserArticles(ctx context.Context, userID int64, req ListArticleReq) (*model.PageResult, error) {
+	req.UserID = userID
+	req.OwnerOnly = true
+	return s.ListArticles(ctx, req)
+}
+
+func (s *ArticleService) SubmitForReview(ctx context.Context, userID, articleID int64) error {
+	return s.ChangeStatus(ctx, userID, articleID, model.ArticleStatusPublished)
+}
+
+func (s *ArticleService) WithdrawReview(ctx context.Context, userID, articleID int64) error {
+	return s.ChangeStatus(ctx, userID, articleID, model.ArticleStatusDraft)
 }
 
 func (s *ArticleService) Ranking(ctx context.Context, period string, limit int) ([]model.Article, error) {
@@ -328,8 +366,16 @@ func (s *ArticleService) uniqueSlug(title string, excludeID int64) string {
 
 func validArticleStatus(status string) bool {
 	return status == model.ArticleStatusDraft ||
+		status == model.ArticleStatusPendingReview ||
 		status == model.ArticleStatusPublished ||
 		status == model.ArticleStatusArchived
+}
+
+func normalizeAuthorStatus(status string) string {
+	if status == model.ArticleStatusPublished {
+		return model.ArticleStatusPendingReview
+	}
+	return status
 }
 
 var markdownSyntaxPattern = regexp.MustCompile(`(?m)[#>*_` + "`" + `\[\]()!-]`)
@@ -428,6 +474,7 @@ func articleListSignature(req ListArticleReq) string {
 		strconv.FormatInt(req.TagID, 10),
 		req.Keyword,
 		strconv.FormatInt(req.UserID, 10),
+		strconv.FormatBool(req.OwnerOnly),
 	}, "|")
 	sum := sha1.Sum([]byte(source))
 	return hex.EncodeToString(sum[:])

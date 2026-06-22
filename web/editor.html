@@ -7,58 +7,51 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/lib/phosphor-icons/index.js"></script>
+<link rel="stylesheet" href="/css/page-common.css">
 <link rel="stylesheet" href="/css/editor.css">
 </head>
 <body>
-<header class="top-bar">
-  <a href="/" class="back-link"><i class="ph ph-arrow-left"></i>返回首页</a>
+<header class="topbar">
   <a href="/" class="site-brand">Journal</a>
-  <div class="editor-actions">
-    <button class="btn btn-secondary" id="btn-preview" type="button"><i class="ph ph-eye"></i>预览</button>
-    <button class="btn btn-primary" id="btn-save" type="button"><i class="ph ph-floppy-disk"></i>保存</button>
-  </div>
+  <nav class="topnav">
+    <a href="/"><i class="ph ph-house"></i><span>首页</span></a>
+    <a href="/following.html"><i class="ph ph-users-three"></i><span>关注</span></a>
+    <a href="/notifications.html"><i class="ph ph-bell"></i><span>消息</span></a>
+    <button class="btn" id="save-draft" type="button"><i class="ph ph-floppy-disk"></i>存草稿</button>
+    <button class="btn primary" id="submit-review" type="button"><i class="ph ph-paper-plane-tilt"></i>提交审核</button>
+  </nav>
 </header>
-<main class="container">
-  <div id="editor-content" hidden>
-    <form id="article-form">
-      <div class="form-group">
-        <label class="form-label">标题</label>
-        <input type="text" class="form-input title-input" id="title" placeholder="文章标题..." required>
+<main class="editor-layout">
+  <section class="editor-main">
+    <input id="title" class="title-input" maxlength="255" placeholder="文章标题">
+    <textarea id="content" class="content-input" placeholder="用 Markdown 写作。支持标题、列表、引用和代码块。"></textarea>
+  </section>
+  <aside class="editor-side">
+    <div id="status" class="status-line" hidden></div>
+    <section class="panel">
+      <h2 class="section-title">发布设置</h2>
+      <div class="form-grid">
+        <label class="field"><span>分类</span><select id="category" class="select"><option value="">不选择分类</option></select></label>
+        <label class="field"><span>标签</span><select id="tags" class="select" multiple size="6"></select></label>
+        <label class="field"><span>封面图 URL</span><input id="cover" class="input" placeholder="https://..."></label>
       </div>
-      <div class="form-group">
-        <label class="form-label">内容 Markdown</label>
-        <textarea class="form-textarea" id="content" placeholder="在此书写 Markdown 内容..." required></textarea>
+    </section>
+    <section class="panel">
+      <h2 class="section-title">我的文章</h2>
+      <div class="filter-row">
+        <select id="article-status" class="select">
+          <option value="">全部状态</option>
+          <option value="draft">草稿</option>
+          <option value="pending_review">待审核</option>
+          <option value="published">已发布</option>
+          <option value="archived">已归档</option>
+        </select>
+        <button class="icon-btn" id="refresh-mine" title="刷新" type="button"><i class="ph ph-arrow-clockwise"></i></button>
       </div>
-      <div class="form-group">
-        <label class="form-label">专题</label>
-        <select class="form-select" id="category"><option value="">无专题</option></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">标签</label>
-        <div class="tag-chips" id="tag-chips"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">封面图</label>
-        <input type="text" class="form-input" id="cover-image" placeholder="封面图 URL（可选）">
-        <img src="" id="cover-preview" class="cover-preview" alt="">
-        <div class="upload-hint">
-          <button class="btn btn-secondary" type="button" id="btn-upload"><i class="ph ph-image"></i>上传图片</button>
-          <input type="file" class="upload-input" id="file-input" accept="image/*">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">状态</label>
-        <div class="status-options">
-          <button type="button" class="status-option selected" data-status="draft">草稿</button>
-          <button type="button" class="status-option" data-status="published">发布</button>
-          <button type="button" class="status-option" data-status="archived">归档</button>
-        </div>
-      </div>
-    </form>
-  </div>
-  <div class="status-line visible" id="status-line">正在加载编辑器...</div>
+      <div id="my-articles" class="my-articles"></div>
+    </section>
+  </aside>
 </main>
-<div class="toast" id="toast"></div>
 <script src="/js/editor.js"></script>
 </body>
 </html>

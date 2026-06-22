@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	ArticleStatusDraft     = "draft"
-	ArticleStatusPublished = "published"
-	ArticleStatusArchived  = "archived"
+	ArticleStatusDraft         = "draft"
+	ArticleStatusPendingReview = "pending_review"
+	ArticleStatusPublished     = "published"
+	ArticleStatusArchived      = "archived"
 )
 
 type Article struct {
@@ -21,6 +22,7 @@ type Article struct {
 	Summary       string         `gorm:"size:500" json:"summary"`
 	CoverImage    string         `gorm:"size:500" json:"cover_image"`
 	Status        string         `gorm:"size:20;not null;default:draft;index" json:"status"`
+	ReviewComment *string        `gorm:"size:500" json:"review_comment,omitempty"`
 	ViewCount     int64          `gorm:"not null;default:0" json:"view_count"`
 	CommentCount  int64          `gorm:"not null;default:0" json:"comment_count"`
 	LikeCount     int64          `gorm:"not null;default:0" json:"like_count"`
