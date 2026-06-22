@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/lib/phosphor-icons/index.js"></script>
+<script src="/js/theme.js"></script>
 <link rel="stylesheet" href="/css/page-common.css">
 <style>
   .page-shell {
@@ -92,6 +93,8 @@
     transition: background 0.15s, transform 0.1s;
   }
   .login-submit:hover { background: #3d4348; }
+  :root[data-theme="dark"] .login-submit { color: #121416; }
+  :root[data-theme="dark"] .login-submit:hover { background: #ddd8ce; }
   .login-submit:active { transform: scale(0.98); }
   .login-submit:disabled { opacity: 0.6; cursor: default; }
 

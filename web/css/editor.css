@@ -1,5 +1,6 @@
 .editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; width: min(1440px, calc(100% - 40px)); margin: 0 auto; padding: 26px 0 60px; }
 .editor-main { min-height: calc(100vh - 128px); padding: 28px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.editor-actionbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 22px; }
 .title-input { width: 100%; border: 0; outline: none; font-family: var(--font-serif); font-size: clamp(2rem, 5vw, 4.5rem); line-height: 1; color: var(--text-primary); background: transparent; }
 .content-input { width: 100%; min-height: 62vh; margin-top: 24px; border: 0; outline: none; resize: vertical; color: var(--text-primary); background: transparent; font: 1rem/1.8 var(--font-sans); }
 .editor-side { position: sticky; top: 88px; display: grid; gap: 16px; align-self: start; }
