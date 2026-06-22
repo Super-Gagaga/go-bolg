@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文章详情 - Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/lib/phosphor-icons/index.js"></script>
+<link rel="stylesheet" href="/css/article-detail.css">
+</head>
+<body>
+<header class="top-bar">
+  <a href="/" class="back-link"><i class="ph ph-arrow-left"></i>返回首页</a>
+  <a href="/" class="site-brand">Journal</a>
+</header>
+<main class="container">
+  <div class="status-line visible" id="status-line">正在加载文章...</div>
+  <div id="article-content" hidden></div>
+  <section class="comments-section" id="comments-section" hidden>
+    <h2 class="comments-title">评论 <span id="comment-count"></span></h2>
+    <div id="comment-list"></div>
+  </section>
+</main>
+<script src="/js/article-detail.js"></script>
+</body>
+</html>

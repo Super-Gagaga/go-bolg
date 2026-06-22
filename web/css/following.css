@@ -1,0 +1,25 @@
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root { --canvas:#f7f6f3; --surface:#fff; --border:#e6e3dc; --text-primary:#2f3437; --text-secondary:#73706a; --text-tertiary:#a6a29a; --font-sans:'Noto Sans SC','SF Pro Display','Helvetica Neue',sans-serif; --font-serif:'Instrument Serif','Lyon Text',serif; }
+body { min-height:100vh; background:var(--canvas); color:var(--text-primary); font-family:var(--font-sans); line-height:1.6; }
+.top-bar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:24px; padding:16px 32px; background:rgba(247,246,243,.88); backdrop-filter:blur(18px); border-bottom:1px solid var(--border); }
+.site-brand { font-family:var(--font-serif); font-size:1.55rem; color:var(--text-primary); text-decoration:none; }
+.back-link { display:inline-flex; align-items:center; gap:6px; color:var(--text-secondary); text-decoration:none; font-size:.84rem; }
+.tabs { margin-left:auto; display:flex; gap:4px; }
+.tab { padding:8px 16px; border:none; border-bottom:2px solid transparent; background:none; color:var(--text-secondary); cursor:pointer; font-family:var(--font-sans); }
+.tab.active { color:var(--text-primary); border-bottom-color:var(--text-primary); font-weight:500; }
+.container { max-width:720px; margin:0 auto; padding:40px 32px 80px; }
+.page-title { margin-bottom:28px; font-family:var(--font-serif); font-size:1.5rem; }
+.user-card { display:flex; align-items:center; gap:14px; padding:16px 0; border-bottom:1px solid var(--border); }
+.user-avatar { width:48px; height:48px; border-radius:50%; object-fit:cover; background:var(--canvas); }
+.user-info { min-width:0; flex:1; }
+.user-name { font-weight:500; }
+.user-bio { color:var(--text-tertiary); font-size:.78rem; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.user-stats { color:var(--text-tertiary); font-size:.74rem; }
+.empty,.status-line { text-align:center; padding:60px 20px; color:var(--text-tertiary); }
+.status-line { display:none; }
+.status-line.visible { display:block; }
+.auth-prompt { text-align:center; padding:80px 20px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
+.auth-prompt h2 { margin-bottom:12px; font-family:var(--font-serif); }
+.auth-prompt p { margin-bottom:24px; color:var(--text-secondary); }
+.btn-login { display:inline-flex; align-items:center; gap:6px; padding:10px 24px; border:none; border-radius:6px; background:var(--text-primary); color:#fff; text-decoration:none; }
+@media(max-width:640px){.top-bar{padding:14px 16px}.container{padding:24px 16px 60px}.tabs{gap:0}.tab{padding:8px 10px}}

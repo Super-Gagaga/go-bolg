@@ -1,0 +1,34 @@
+app:
+  name: go-bolg
+  host: 0.0.0.0
+  port: 8080
+  mode: debug
+  read_timeout: 10s
+  write_timeout: 10s
+
+database:
+  driver: mysql
+  host: 127.0.0.1
+  port: 3306
+  username: root
+  password: 123456
+  database: go_bolg
+  charset: utf8mb4
+  parse_time: true
+  loc: Local
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 1h
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  access_secret: change-me-access-secret
+  refresh_secret: change-me-refresh-secret
+  access_ttl: 15m
+  refresh_ttl: 168h
+  issuer: go-bolg

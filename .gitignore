@@ -1,0 +1,10 @@
+bin/
+*.exe
+*.test
+*.out
+.env
+.env.*
+!.env.example
+tmp/
+dist/
+uploads/
