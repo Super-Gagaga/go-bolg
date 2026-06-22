@@ -5,14 +5,50 @@ const params = new URLSearchParams(location.search);
 let editingID = params.get('id');
 function esc(v = '') { return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function show(msg) { $('#status').textContent = msg; $('#status').hidden = !msg; }
+function showUploadStatus(msg, isError = false) {
+  const el = $('#cover-upload-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.classList.toggle('error', Boolean(isError));
+}
 async function api(path, options = {}) {
   if (!token()) throw new Error('请先登录后写作。');
-  const headers = { Authorization: `Bearer ${token()}`, ...(options.headers || {}) };
+  return apiRequest(token(), path, options);
+}
+
+async function apiRequest(tok, path, options = {}) {
+  const headers = { Authorization: `Bearer ${tok}`, ...(options.headers || {}) };
   if (options.body && !(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   const res = await fetch(API + path, { ...options, headers });
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    const newToken = await tryRefreshToken();
+    if (newToken) return apiRequest(newToken, path, options);
+  }
   if (!res.ok || body.code !== 0) throw new Error(body.message || `请求失败 ${res.status}`);
   return body.data;
+}
+
+async function tryRefreshToken() {
+  const refresh = localStorage.getItem('refresh_token');
+  if (!refresh) { show('登录已过期，请返回首页重新登录。'); return null; }
+  try {
+    const res = await fetch(API + '/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refresh })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.code !== 0) throw new Error();
+    localStorage.setItem('jwt_token', body.data.access_token);
+    localStorage.setItem('refresh_token', body.data.refresh_token);
+    return body.data.access_token;
+  } catch {
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('refresh_token');
+    show('登录已过期，请返回首页重新登录。');
+    return null;
+  }
 }
 async function loadOptions() {
   const [categories, tags] = await Promise.all([
@@ -33,6 +69,79 @@ function payload(status) {
     cover_image: $('#cover').value.trim(),
     status
   };
+}
+function setCover(url) {
+  $('#cover').value = url || '';
+  const preview = $('#cover-preview');
+  if (!preview) return;
+  if (url) {
+    preview.classList.remove('empty');
+    preview.innerHTML = `<img src="${esc(url)}" alt="封面预览">`;
+  } else {
+    preview.classList.add('empty');
+    preview.textContent = '暂未选择封面';
+  }
+}
+function isImage(file) {
+  return file && (file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif)$/i.test(file.name || ''));
+}
+function firstImage(files) {
+  return Array.from(files || []).find(isImage);
+}
+async function walkEntry(entry) {
+  if (!entry) return [];
+  if (entry.isFile) {
+    return new Promise(resolve => entry.file(file => resolve([file]), () => resolve([])));
+  }
+  if (!entry.isDirectory) return [];
+  const reader = entry.createReader();
+  const entries = await new Promise(resolve => reader.readEntries(resolve, () => resolve([])));
+  const nested = await Promise.all(entries.map(walkEntry));
+  return nested.flat();
+}
+async function filesFromDrop(event) {
+  const items = Array.from(event.dataTransfer?.items || []);
+  const entries = items.map(item => item.webkitGetAsEntry?.()).filter(Boolean);
+  if (entries.length) {
+    const nested = await Promise.all(entries.map(walkEntry));
+    return nested.flat();
+  }
+  return Array.from(event.dataTransfer?.files || []);
+}
+function openUploadModal() {
+  showUploadStatus('');
+  $('#cover-upload-modal').classList.add('visible');
+  $('#cover-upload-modal').setAttribute('aria-hidden', 'false');
+}
+function closeUploadModal() {
+  $('#cover-upload-modal').classList.remove('visible');
+  $('#cover-upload-modal').setAttribute('aria-hidden', 'true');
+  document.querySelector('#open-cover-upload')?.focus();
+}
+async function uploadCover(file) {
+  if (!file) {
+    showUploadStatus('请选择一张图片。', true);
+    return;
+  }
+  if (!isImage(file)) {
+    showUploadStatus('只能上传 jpg、png、webp 或 gif 图片。', true);
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showUploadStatus('图片不能超过 5MB。', true);
+    return;
+  }
+  showUploadStatus('正在上传封面...');
+  try {
+    const form = new FormData();
+    form.append('image', file);
+    const data = await api('/articles/upload', { method: 'POST', body: form });
+    setCover(data.url || '');
+    showUploadStatus('封面上传成功。');
+    setTimeout(closeUploadModal, 450);
+  } catch (e) {
+    showUploadStatus(e.message, true);
+  }
 }
 async function save(status) {
   const data = payload(status);
@@ -55,7 +164,7 @@ async function loadArticle() {
     const a = await api(`/articles/${editingID}`);
     $('#title').value = a.title || '';
     $('#content').value = a.content || '';
-    $('#cover').value = a.cover_image || '';
+    setCover(a.cover_image || '');
     if (a.category_id) $('#category').value = String(a.category_id);
     const tagSet = new Set((a.tags || []).map(t => String(t.id)));
     Array.from($('#tags').options).forEach(o => { o.selected = tagSet.has(o.value); });
@@ -84,6 +193,39 @@ $('#save-draft').onclick = () => save('draft');
 $('#submit-review').onclick = () => save('published');
 $('#refresh-mine').onclick = loadMine;
 $('#article-status').onchange = loadMine;
+$('#open-cover-upload').onclick = openUploadModal;
+$('#cover-upload-close').onclick = closeUploadModal;
+$('#cover-upload-modal').addEventListener('click', event => {
+  if (event.target === $('#cover-upload-modal')) closeUploadModal();
+});
+$('#choose-cover-file').onclick = () => {
+  $('#cover-file-input').value = '';
+  $('#cover-file-input').click();
+};
+$('#choose-cover-folder').onclick = () => {
+  $('#cover-folder-input').value = '';
+  $('#cover-folder-input').click();
+};
+$('#cover-file-input').addEventListener('change', event => uploadCover(firstImage(event.target.files)));
+$('#cover-folder-input').addEventListener('change', event => uploadCover(firstImage(event.target.files)));
+['dragenter', 'dragover'].forEach(type => {
+  $('#cover-dropzone').addEventListener(type, event => {
+    event.preventDefault();
+    $('#cover-dropzone').classList.add('dragover');
+  });
+});
+['dragleave', 'drop'].forEach(type => {
+  $('#cover-dropzone').addEventListener(type, event => {
+    event.preventDefault();
+    $('#cover-dropzone').classList.remove('dragover');
+  });
+});
+$('#cover-dropzone').addEventListener('drop', async event => {
+  uploadCover(firstImage(await filesFromDrop(event)));
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && $('#cover-upload-modal')?.classList.contains('visible')) closeUploadModal();
+});
 (async function init() {
   if (!token()) { show('请先从首页登录，再进入编辑器。'); return; }
   await loadOptions();

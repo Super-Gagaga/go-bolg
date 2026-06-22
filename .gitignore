@@ -8,3 +8,5 @@ bin/
 tmp/
 dist/
 uploads/
+.png
+.jpg

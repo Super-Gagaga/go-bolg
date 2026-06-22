@@ -38,7 +38,14 @@
       <div class="form-grid">
         <label class="field"><span>分类</span><select id="category" class="select"><option value="">不选择分类</option></select></label>
         <label class="field"><span>标签</span><select id="tags" class="select" multiple size="6"></select></label>
-        <label class="field"><span>封面图 URL</span><input id="cover" class="input" placeholder="https://..."></label>
+        <div class="field">
+          <span>封面图</span>
+          <input id="cover" type="hidden">
+          <div class="cover-picker" id="cover-picker">
+            <div class="cover-preview empty" id="cover-preview">暂未选择封面</div>
+            <button class="btn" id="open-cover-upload" type="button"><i class="ph ph-upload-simple"></i>上传封面</button>
+          </div>
+        </div>
       </div>
     </section>
     <section class="panel">
@@ -57,6 +64,24 @@
     </section>
   </aside>
 </main>
+</div>
+<div class="upload-modal" id="cover-upload-modal" aria-hidden="true">
+  <div class="upload-panel" role="dialog" aria-modal="true" aria-labelledby="cover-upload-title">
+    <button class="icon-btn upload-close" id="cover-upload-close" type="button" aria-label="关闭"><i class="ph ph-x"></i></button>
+    <h2 class="section-title" id="cover-upload-title">上传封面</h2>
+    <div class="upload-dropzone" id="cover-dropzone">
+      <i class="ph ph-image-square"></i>
+      <strong>拖动图片到这里</strong>
+      <span>也可以拖动文件夹，系统会选择其中第一张图片作为封面</span>
+    </div>
+    <div class="upload-actions">
+      <button class="btn" id="choose-cover-file" type="button"><i class="ph ph-file-image"></i>选择图片</button>
+      <button class="btn" id="choose-cover-folder" type="button"><i class="ph ph-folder-open"></i>选择文件夹</button>
+    </div>
+    <input id="cover-file-input" type="file" accept="image/*" hidden>
+    <input id="cover-folder-input" type="file" accept="image/*" webkitdirectory directory multiple hidden>
+    <div class="upload-status" id="cover-upload-status"></div>
+  </div>
 </div>
 <script src="/js/editor.js"></script>
 </body>
