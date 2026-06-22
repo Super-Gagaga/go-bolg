@@ -17,7 +17,13 @@ func TestBaseRoutes(t *testing.T) {
 		path string
 	}{
 		{name: "home page", path: "/"},
-		{name: "index page", path: "/index.html"},
+		{name: "article detail page", path: "/article-detail"},
+		{name: "editor page", path: "/editor"},
+		{name: "following page", path: "/following"},
+		{name: "notifications page", path: "/notifications"},
+		{name: "my profile page", path: "/my-profile"},
+		{name: "admin page", path: "/admin-console"},
+		{name: "admin login page", path: "/admin-login"},
 		{name: "index css", path: "/css/index.css"},
 		{name: "index js", path: "/js/index.js"},
 		{name: "health", path: "/health"},

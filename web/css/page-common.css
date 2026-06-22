@@ -22,6 +22,7 @@
 }
 html { font-size: 15px; -webkit-font-smoothing: antialiased; }
 body { margin: 0; min-height: 100vh; font-family: var(--font-sans); background: var(--canvas); color: var(--text-primary); line-height: 1.65; }
+.page-shell { max-width: 1600px; min-height: 100vh; margin: 0 auto; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }

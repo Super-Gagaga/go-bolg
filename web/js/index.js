@@ -96,7 +96,7 @@ function categoryName(article) {
 }
 
 function openArticle(article) {
-  window.location.href = `/article-detail.html?id=${article.id}`;
+  window.location.href = `/article-detail?id=${article.id}`;
 }
 
 async function loadCurrentUser() {
@@ -128,11 +128,42 @@ function renderLoggedOut() {
 
 function renderLoggedIn(profile) {
   els.authArea.innerHTML = `
-    <a class="user-menu" href="/editor.html" title="${escapeHTML(profile.username || '我的主页')}">
-      <img class="user-menu-avatar" src="${escapeHTML(avatarFor(profile))}" alt="">
-      <span class="user-menu-name">${escapeHTML(profile.username || '用户')}</span>
-    </a>
+    <div class="user-dropdown" id="user-dropdown">
+      <button class="user-menu" type="button" id="user-menu-button" aria-haspopup="menu" aria-expanded="false" title="${escapeHTML(profile.username || '我的主页')}">
+        <img class="user-menu-avatar" src="${escapeHTML(avatarFor(profile))}" alt="">
+        <span class="user-menu-name">${escapeHTML(profile.username || '用户')}</span>
+        <i class="ph ph-caret-down user-menu-caret"></i>
+      </button>
+      <div class="user-menu-list" role="menu">
+        <a href="/my-profile" role="menuitem"><i class="ph ph-user-circle"></i>我的主页</a>
+        <button type="button" id="btn-logout" role="menuitem"><i class="ph ph-sign-out"></i>退出登录</button>
+      </div>
+    </div>
   `;
+}
+
+function closeUserMenu() {
+  const dropdown = document.querySelector('#user-dropdown');
+  const button = document.querySelector('#user-menu-button');
+  if (!dropdown) return;
+  dropdown.classList.remove('open');
+  button?.setAttribute('aria-expanded', 'false');
+}
+
+function toggleUserMenu() {
+  const dropdown = document.querySelector('#user-dropdown');
+  const button = document.querySelector('#user-menu-button');
+  if (!dropdown) return;
+  const open = !dropdown.classList.contains('open');
+  dropdown.classList.toggle('open', open);
+  button?.setAttribute('aria-expanded', String(open));
+}
+
+function logout() {
+  localStorage.removeItem('jwt_token');
+  localStorage.removeItem('refresh_token');
+  closeUserMenu();
+  renderLoggedOut();
 }
 
 function setAuthMode(mode) {
@@ -446,6 +477,19 @@ document.addEventListener('click', async event => {
     openLoginModal();
     return;
   }
+  if (event.target.closest('#user-menu-button')) {
+    event.stopPropagation();
+    toggleUserMenu();
+    return;
+  }
+  if (event.target.closest('#btn-logout')) {
+    event.stopPropagation();
+    logout();
+    return;
+  }
+  if (!event.target.closest('#user-dropdown')) {
+    closeUserMenu();
+  }
   const follow = event.target.closest('.btn-follow');
   if (!follow) return;
   event.stopPropagation();
@@ -474,6 +518,7 @@ document.addEventListener('keydown', event => {
     els.searchInput.focus();
   }
   if (event.key === 'Escape' && els.loginModal.classList.contains('visible')) closeLoginModal();
+  if (event.key === 'Escape') closeUserMenu();
 });
 
 els.loginClose.addEventListener('click', closeLoginModal);

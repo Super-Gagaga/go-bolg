@@ -5,9 +5,9 @@ let view = 'pending';
 function esc(v = '') { return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function show(msg) { $('#status').textContent = msg; $('#status').hidden = !msg; }
 async function api(path, options = {}) {
-  if (!token()) { location.href = '/admin-login.html'; throw new Error('请先登录。'); }
+  if (!token()) { location.href = '/admin-login'; throw new Error('请先登录。'); }
   const res = await fetch(API + path, { ...options, headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json', ...(options.headers || {}) } });
-  if (res.status === 401) { localStorage.removeItem('jwt_token'); localStorage.removeItem('refresh_token'); location.href = '/admin-login.html'; throw new Error('登录已过期'); }
+  if (res.status === 401) { localStorage.removeItem('jwt_token'); localStorage.removeItem('refresh_token'); location.href = '/admin-login'; throw new Error('登录已过期'); }
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body.code !== 0) throw new Error(body.message || `请求失败 ${res.status}`);
   return body.data;
@@ -102,7 +102,7 @@ async function action(path, method, body, after) {
 }
 async function guard() {
   if (!token()) {
-    location.href = '/admin-login.html';
+    location.href = '/admin-login';
     throw new Error('请先登录');
   }
   const res = await fetch(API + '/user/profile', {
@@ -111,20 +111,20 @@ async function guard() {
   if (res.status === 401) {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('refresh_token');
-    location.href = '/admin-login.html';
+    location.href = '/admin-login';
     throw new Error('登录已过期');
   }
   const body = await res.json().catch(() => ({}));
   if (body.code !== 0 || !body.data) {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('refresh_token');
-    location.href = '/admin-login.html';
+    location.href = '/admin-login';
     throw new Error('无法获取用户信息');
   }
   if (body.data.role !== 'admin') {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('refresh_token');
-    location.href = '/admin-login.html?error=' + encodeURIComponent('此账号没有管理员权限');
+    location.href = '/admin-login?error=' + encodeURIComponent('此账号没有管理员权限');
     throw new Error('当前账号没有管理员权限。');
   }
 }

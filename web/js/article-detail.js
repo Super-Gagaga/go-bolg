@@ -38,7 +38,7 @@ function renderArticle(a) {
     <div class="article-tools">
       <button class="btn" data-action="like"><i class="ph ph-heart"></i>喜欢</button>
       <button class="btn" data-action="favorite"><i class="ph ph-bookmark-simple"></i>收藏</button>
-      <a class="btn" href="/editor.html?id=${a.id}"><i class="ph ph-pencil-simple"></i>编辑</a>
+      <a class="btn" href="/editor?id=${a.id}"><i class="ph ph-pencil-simple"></i>编辑</a>
     </div>
     <div class="article-content">${a.content_html || `<p>${esc(a.content || a.summary || '')}</p>`}</div>
   `;

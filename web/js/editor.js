@@ -43,7 +43,7 @@ async function save(status) {
     const method = editingID ? 'PUT' : 'POST';
     const article = await api(path, { method, body: JSON.stringify(data) });
     editingID = article.id;
-    history.replaceState(null, '', `/editor.html?id=${editingID}`);
+    history.replaceState(null, '', `/editor?id=${editingID}`);
     show(status === 'published' ? '已提交审核。' : '草稿已保存。');
     loadMine();
   } catch (e) { show(e.message); }
@@ -77,7 +77,7 @@ async function loadMine() {
       <div class="my-article-meta">${statusChip(a.status)}<span class="tiny">${new Date(a.updated_at || a.created_at).toLocaleDateString('zh-CN')}</span></div>
       ${a.review_comment ? `<div class="tiny">驳回：${esc(a.review_comment)}</div>` : ''}
     </article>`).join('') : '<div class="empty">还没有文章。</div>';
-    document.querySelectorAll('.my-article').forEach(el => el.onclick = () => location.href = `/editor.html?id=${el.dataset.id}`);
+    document.querySelectorAll('.my-article').forEach(el => el.onclick = () => location.href = `/editor?id=${el.dataset.id}`);
   } catch (e) { $('#my-articles').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 $('#save-draft').onclick = () => save('draft');
