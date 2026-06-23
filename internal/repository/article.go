@@ -334,8 +334,9 @@ func applyArticleFilters(query *gorm.DB, filter ListArticleFilter) *gorm.DB {
 	if filter.UserID > 0 {
 		query = query.Where("articles.user_id = ?", filter.UserID)
 	}
-	if filter.Keyword != "" {
-		query = query.Where("MATCH(articles.title, articles.content) AGAINST(? IN NATURAL LANGUAGE MODE)", filter.Keyword)
+	if strings.TrimSpace(filter.Keyword) != "" {
+		like := "%" + strings.TrimSpace(filter.Keyword) + "%"
+		query = query.Where("articles.title LIKE ? OR articles.content LIKE ? OR articles.summary LIKE ?", like, like, like)
 	}
 	if filter.TagID > 0 {
 		query = query.Joins("JOIN article_tags ON article_tags.article_id = articles.id").

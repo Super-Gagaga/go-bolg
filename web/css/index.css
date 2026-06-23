@@ -60,7 +60,7 @@ body { min-height: 100vh; font-family: var(--font-sans); background: var(--canva
 .search-box i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); }
 .search-box input {
   width: 100%;
-  padding: 11px 82px 11px 44px;
+  padding: 11px 48px 11px 44px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -68,6 +68,23 @@ body { min-height: 100vh; font-family: var(--font-sans); background: var(--canva
   outline: none;
 }
 .search-box input:focus { border-color: #c7c1b7; box-shadow: 0 0 0 3px rgba(0,0,0,0.03); }
+.search-submit {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.search-submit:hover { background: rgba(0,0,0,0.045); color: var(--text-primary); }
+:root[data-theme="dark"] .search-submit:hover { background: rgba(255,255,255,0.07); }
 .search-shortcut { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; }
 kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--canvas); color: var(--text-tertiary); font: 0.68rem var(--font-mono); }
 
