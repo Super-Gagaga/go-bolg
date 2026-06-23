@@ -38,6 +38,9 @@ func main() {
 	if err != nil {
 		logger.Fatal("mysql initialization failed", zap.Error(err))
 	}
+	if err := database.EnsureRuntimeSchema(db); err != nil {
+		logger.Fatal("database schema initialization failed", zap.Error(err))
+	}
 
 	redisClient, err := cache.NewRedis(ctx, cfg.Redis)
 	if err != nil {

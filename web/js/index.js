@@ -490,6 +490,19 @@ document.addEventListener('click', async event => {
   if (!event.target.closest('#user-dropdown')) {
     closeUserMenu();
   }
+
+  const navLink = event.target.closest('[data-nav]');
+  if (navLink) {
+    event.preventDefault();
+    if (!token()) {
+      openLoginModal();
+      return;
+    }
+    const pages = { following: '/following', notifications: '/notifications', editor: '/editor' };
+    window.location.href = pages[navLink.dataset.nav] || '/';
+    return;
+  }
+
   const follow = event.target.closest('.btn-follow');
   if (!follow) return;
   event.stopPropagation();

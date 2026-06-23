@@ -25,7 +25,7 @@ async function apiRequest(tok, path, options = {}) {
     const newToken = await tryRefreshToken();
     if (newToken) return apiRequest(newToken, path, options);
   }
-  if (!res.ok || body.code !== 0) throw new Error(body.message || `请求失败 ${res.status}`);
+  if (!res.ok || body.code !== 0) throw new Error(body.message || body.error || `请求失败 ${res.status}`);
   return body.data;
 }
 

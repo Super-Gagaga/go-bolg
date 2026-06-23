@@ -2,6 +2,8 @@ const API = '/api/v1';
 const token = () => localStorage.getItem('jwt_token');
 const $ = selector => document.querySelector(selector);
 
+let currentProfile = null;
+
 function esc(value = '') {
   return String(value).replace(/[&<>"']/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -27,7 +29,7 @@ function showStatus(message) {
   el.hidden = !message;
 }
 
-async function api(path, params = {}) {
+async function api(path, params = {}, options = {}) {
   if (!token()) {
     location.href = '/';
     return null;
@@ -36,7 +38,10 @@ async function api(path, params = {}) {
   Object.entries(params).forEach(([key, value]) => {
     if (value !== '' && value !== null && value !== undefined) url.searchParams.set(key, value);
   });
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token()}` } });
+  const res = await fetch(url, {
+    ...options,
+    headers: { Authorization: `Bearer ${token()}`, ...(options.headers || {}) }
+  });
   if (res.status === 401) {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('refresh_token');
@@ -49,6 +54,7 @@ async function api(path, params = {}) {
 }
 
 function renderProfile(profile) {
+  currentProfile = profile;
   $('#profile-avatar').src = avatarFor(profile);
   $('#profile-name').textContent = profile.username || '我的主页';
   $('#profile-bio').textContent = profile.bio || '还没有填写简介。';
@@ -87,6 +93,104 @@ function renderFavorites(result) {
   `).join('') : '<div class="empty">还没有收藏文章。</div>';
 }
 
+// --- Edit profile ---
+
+function openEditPanel() {
+  if (!currentProfile) return;
+  $('#edit-username').value = currentProfile.username || '';
+  $('#edit-bio').value = currentProfile.bio || '';
+  $('#edit-error').textContent = '';
+  $('#profile-edit-panel').hidden = false;
+  $('#profile-edit-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => $('#edit-username').focus(), 150);
+}
+
+function closeEditPanel() {
+  $('#profile-edit-panel').hidden = true;
+  $('#edit-error').textContent = '';
+}
+
+async function handleEditSubmit(event) {
+  event.preventDefault();
+  const submitBtn = $('#profile-edit-form').querySelector('.btn.primary');
+  const errorEl = $('#edit-error');
+  submitBtn.disabled = true;
+  errorEl.textContent = '';
+
+  const username = $('#edit-username').value.trim();
+  const bio = $('#edit-bio').value.trim();
+
+  try {
+    const body = {};
+    if (username && username !== currentProfile.username) body.username = username;
+    if (bio !== (currentProfile.bio || '')) body.bio = bio;
+
+    if (!body.username && body.bio === undefined && (!('bio' in body) || Object.keys(body).length === 0)) {
+      closeEditPanel();
+      return;
+    }
+
+    const res = await fetch(`${API}/user/profile`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.status === 401) {
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('refresh_token');
+      location.href = '/';
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok || data.code !== 0) throw new Error(data.message || '保存失败');
+
+    currentProfile = data.data;
+    renderProfile(currentProfile);
+    closeEditPanel();
+  } catch (error) {
+    errorEl.textContent = error.message;
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+async function handleAvatarChange(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('avatar', file);
+
+  showStatus('正在上传头像...');
+  try {
+    const res = await fetch(`${API}/user/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token()}` },
+      body: formData
+    });
+    if (res.status === 401) {
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('refresh_token');
+      location.href = '/';
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok || data.code !== 0) throw new Error(data.message || '上传失败');
+
+    // Refresh the avatar in-place
+    const url = data.data.avatar;
+    $('#profile-avatar').src = url + '?t=' + Date.now();
+    if (currentProfile) currentProfile.avatar = url;
+    showStatus('');
+  } catch (error) {
+    showStatus(error.message);
+  } finally {
+    $('#avatar-input').value = '';
+  }
+}
+
+// --- Init ---
+
 (async function init() {
   try {
     showStatus('正在加载我的主页...');
@@ -101,6 +205,14 @@ function renderFavorites(result) {
     renderFavorites(favorites);
     $('#profile-content').hidden = false;
     showStatus('');
+
+    // Bind edit events
+    $('#edit-profile-btn').addEventListener('click', openEditPanel);
+    $('#cancel-edit-btn').addEventListener('click', closeEditPanel);
+    $('#cancel-edit').addEventListener('click', closeEditPanel);
+    $('#profile-edit-form').addEventListener('submit', handleEditSubmit);
+    $('#avatar-edit-btn').addEventListener('click', () => $('#avatar-input').click());
+    $('#avatar-input').addEventListener('change', handleAvatarChange);
   } catch (error) {
     showStatus(error.message);
   }

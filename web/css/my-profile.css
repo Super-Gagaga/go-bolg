@@ -37,6 +37,40 @@
   color: var(--text-secondary);
 }
 
+.profile-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.profile-avatar-wrap:hover .avatar-edit-btn { opacity: 1; }
+.avatar-edit-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--text-primary);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.profile-edit-panel {
+  margin-bottom: 16px;
+  max-width: 640px;
+}
+.edit-error {
+  min-height: 18px;
+  color: var(--accent-red);
+  font-size: 0.78rem;
+}
+
 .profile-actions {
   display: flex;
   flex-wrap: wrap;

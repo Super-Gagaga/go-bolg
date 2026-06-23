@@ -27,7 +27,11 @@
   <div id="status" class="status-line">正在加载我的主页...</div>
 
   <section class="profile-hero" id="profile-hero" hidden>
-    <img class="profile-avatar" id="profile-avatar" src="" alt="">
+    <div class="profile-avatar-wrap">
+      <img class="profile-avatar" id="profile-avatar" src="" alt="">
+      <button class="avatar-edit-btn" id="avatar-edit-btn" type="button" title="更换头像"><i class="ph ph-camera"></i></button>
+      <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/webp" hidden>
+    </div>
     <div class="profile-copy">
       <p class="label">profile</p>
       <h1 id="profile-name">我的主页</h1>
@@ -35,8 +39,31 @@
       <div class="profile-actions">
         <a class="btn primary" href="/editor"><i class="ph ph-pencil-simple"></i>写文章</a>
         <a class="btn" href="/following"><i class="ph ph-users-three"></i>关注列表</a>
+        <button class="btn" id="edit-profile-btn" type="button"><i class="ph ph-user-circle-gear"></i>编辑信息</button>
       </div>
     </div>
+  </section>
+
+  <section class="profile-edit-panel panel" id="profile-edit-panel" hidden>
+    <div class="panel-head">
+      <h2 class="section-title">编辑个人信息</h2>
+      <button class="icon-btn" id="cancel-edit" type="button" title="取消"><i class="ph ph-x"></i></button>
+    </div>
+    <form class="form-grid" id="profile-edit-form">
+      <label class="field">
+        <span>用户名</span>
+        <input class="input" id="edit-username" type="text" minlength="3" maxlength="50" required>
+      </label>
+      <label class="field">
+        <span>简介</span>
+        <textarea class="textarea" id="edit-bio" maxlength="500" placeholder="介绍一下你自己..."></textarea>
+      </label>
+      <div class="edit-error" id="edit-error"></div>
+      <div class="actions">
+        <button class="btn primary" type="submit"><i class="ph ph-check"></i>保存</button>
+        <button class="btn" type="button" id="cancel-edit-btn">取消</button>
+      </div>
+    </form>
   </section>
 
   <section class="stat-grid" id="stat-grid" hidden>
