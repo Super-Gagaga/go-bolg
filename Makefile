@@ -12,8 +12,8 @@ help:
 	@echo "lint         - run golangci-lint"
 	@echo "migrate-up   - apply database migrations"
 	@echo "migrate-down - roll back one database migration"
-	@echo "docker-up    - start MySQL and Redis"
-	@echo "docker-down  - stop MySQL and Redis"
+	@echo "docker-up    - build and start the complete Docker stack"
+	@echo "docker-down  - stop the Docker stack"
 
 build:
 	go build -o $(BINARY) $(MAIN)
@@ -41,7 +41,7 @@ migrate-down:
 	migrate -path migrations -database "$(DATABASE_URL)" down 1
 
 docker-up:
-	docker compose -f deploy/docker-compose.yml up -d
+	docker compose -f deploy/docker-compose.yml up -d --build
 
 docker-down:
 	docker compose -f deploy/docker-compose.yml down

@@ -10,6 +10,7 @@
 --   000003_create_interaction_tables
 --   000004_create_community_tables
 --   000005_phase6_optimization
+--   000006_admin_review_audit
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -72,6 +73,7 @@ CREATE TABLE articles (
     summary        VARCHAR(500)          DEFAULT NULL,
     cover_image    VARCHAR(500)          DEFAULT NULL,
     status         VARCHAR(20)  NOT NULL DEFAULT 'draft',
+    review_comment VARCHAR(500)          DEFAULT NULL,
     view_count     BIGINT       NOT NULL DEFAULT 0,
     comment_count  BIGINT       NOT NULL DEFAULT 0,
     like_count     BIGINT       NOT NULL DEFAULT 0,
@@ -190,6 +192,28 @@ CREATE TABLE notifications (
     KEY idx_notifications_created_at (created_at),
 
     CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- 11. audit_logs — 管理员操作审计日志
+-- ----------------------------------------------------------------------------
+CREATE TABLE audit_logs (
+    id          BIGINT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    admin_id    BIGINT      NOT NULL,
+    action      VARCHAR(80) NOT NULL,
+    target_type VARCHAR(40)          DEFAULT NULL,
+    target_id   BIGINT               DEFAULT NULL,
+    detail      TEXT                 DEFAULT NULL,
+    ip          VARCHAR(64)          DEFAULT NULL,
+    created_at  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    KEY idx_audit_logs_admin_id    (admin_id),
+    KEY idx_audit_logs_action      (action),
+    KEY idx_audit_logs_target_type (target_type),
+    KEY idx_audit_logs_target_id   (target_id),
+    KEY idx_audit_logs_created_at  (created_at),
+
+    CONSTRAINT fk_audit_logs_admin FOREIGN KEY (admin_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================

@@ -1,0 +1,11 @@
+.git
+.gitignore
+.vscode
+bin
+dist
+uploads
+deploy
+docs
+*.log
+.env
+.env.*

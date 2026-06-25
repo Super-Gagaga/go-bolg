@@ -1,31 +1,67 @@
 services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: go-bolg:local
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      GO_BOLG_APP_MODE: release
+      GO_BOLG_DATABASE_HOST: mysql
+      GO_BOLG_DATABASE_PORT: 3306
+      GO_BOLG_DATABASE_USERNAME: ${MYSQL_USER:-go_bolg}
+      GO_BOLG_DATABASE_PASSWORD: ${MYSQL_PASSWORD:-go_bolg}
+      GO_BOLG_DATABASE_DATABASE: ${MYSQL_DATABASE:-go_bolg}
+      GO_BOLG_REDIS_HOST: redis
+      GO_BOLG_REDIS_PORT: 6379
+      GO_BOLG_JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-replace-this-access-secret}
+      GO_BOLG_JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-replace-this-refresh-secret}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   mysql:
     image: mysql:8.4
-    container_name: go-bolg-mysql
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: go_bolg
-      MYSQL_USER: go_bolg
-      MYSQL_PASSWORD: go_bolg
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-go_bolg}
+      MYSQL_USER: ${MYSQL_USER:-go_bolg}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-go_bolg}
       TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ../sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 20s
 
   redis:
     image: redis:7.4-alpine
-    container_name: go-bolg-redis
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
@@ -36,5 +72,6 @@ services:
       retries: 5
 
 volumes:
+  uploads_data:
   mysql_data:
   redis_data:

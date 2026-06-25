@@ -18,6 +18,9 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------------------------------------------------------
 -- 清理上一次的种子数据。为了兼容性，先删除子表记录。
 -- ----------------------------------------------------------------------------
+DELETE FROM audit_logs
+WHERE id BETWEEN 6001 AND 6999
+   OR admin_id BETWEEN 1001 AND 1099;
 DELETE FROM notifications WHERE id BETWEEN 5001 AND 5999;
 DELETE FROM favorites WHERE user_id BETWEEN 1001 AND 1099 OR article_id BETWEEN 2001 AND 2099;
 DELETE FROM likes WHERE user_id BETWEEN 1001 AND 1099 OR article_id BETWEEN 2001 AND 2099;
@@ -54,28 +57,28 @@ INSERT INTO users (
         '$2b$10$zXc2E/7tSgBpze6cTb6JZ.oZCVuL64xJAhlJBOg.qEhMvhPJ2q3N2',
         'https://api.dicebear.com/7.x/initials/svg?seed=Alice',
         'Go 后端工程师，专注于 API 与服务设计。', 'user', 'active',
-        2, 3, 2, '2026-06-15 02:18:49.000', '2026-06-22 21:56:40.000'
+        2, 4, 2, '2026-06-15 02:18:49.000', '2026-06-22 21:56:40.000'
     ),
     (
         1003, 'bob', 'bob@example.com',
         '$2a$10$KIXQXfl6ZVIwkV3GEPvqKuoeUry6RFSP4ePLiEhlG8cu35fATVmoa',
         'https://api.dicebear.com/7.x/initials/svg?seed=Bob',
         '数据库爱好者，专注 MySQL 与查询性能优化。', 'user', 'active',
-        2, 2, 2, '2026-06-15 07:01:23.000', '2026-06-22 20:24:35.000'
+        2, 3, 2, '2026-06-15 07:01:23.000', '2026-06-22 20:24:35.000'
     ),
     (
         1004, 'carol', 'carol@example.com',
         '$2a$10$KIXQXfl6ZVIwkV3GEPvqKuoeUry6RFSP4ePLiEhlG8cu35fATVmoa',
         'https://api.dicebear.com/7.x/initials/svg?seed=Carol',
         '云原生开发者，热衷于可观测性与 Redis。', 'user', 'active',
-        2, 2, 3, '2026-06-15 12:23:24.000', '2026-06-22 23:59:59.000'
+        2, 3, 3, '2026-06-15 12:23:24.000', '2026-06-22 23:59:59.000'
     ),
     (
         1005, 'dave', 'dave@example.com',
         '$2a$10$KIXQXfl6ZVIwkV3GEPvqKuoeUry6RFSP4ePLiEhlG8cu35fATVmoa',
         'https://api.dicebear.com/7.x/initials/svg?seed=Dave',
         '偏前端方向的全栈开发者，负责测试编辑器流程。', 'user', 'active',
-        1, 0, 3, '2026-06-16 11:05:31.000', '2026-06-22 18:27:08.000'
+        1, 1, 3, '2026-06-16 11:05:31.000', '2026-06-22 18:27:08.000'
     ),
     (
         1006, 'eve', 'eve@example.com',
@@ -247,7 +250,7 @@ INSERT INTO articles (
         1004, 1003, '2026-06-21 10:28:36.000', '2026-06-22 02:15:39.000'
     ),
     -- =========================================================================
-    -- 2004 · 草稿 — alice
+    -- 2004 · 待审核 — alice
     -- =========================================================================
     (
         2004,
@@ -286,7 +289,7 @@ INSERT INTO articles (
         '<ul><li>Lua 原子化</li><li>并发 refresh 评估</li><li>测试用例</li></ul>',
         '关于 Access Token 与 Refresh Token 轮换机制的工作笔记：Rotation、Reuse Detection 和 Family 方案草稿。',
         NULL,
-        'draft', 0, 0, 0, 0,
+        'pending_review', 0, 0, 0, 0,
         1002, 1002, '2026-06-22 05:03:50.000', '2026-06-22 05:03:50.000'
     ),
     -- =========================================================================
@@ -705,6 +708,28 @@ INSERT INTO notifications (id, user_id, type, content, is_read, created_at) VALU
         FALSE, '2026-06-22 19:09:25.000'
     );
 
+-- ----------------------------------------------------------------------------
+-- 管理员审计日志。target_id 指向现有用户或文章，detail 保留操作时的上下文。
+-- ----------------------------------------------------------------------------
+INSERT INTO audit_logs (
+    id, admin_id, action, target_type, target_id, detail, ip, created_at
+) VALUES
+    (
+        6001, 1001, 'ban_user', 'user', 1006,
+        JSON_OBJECT('status', 'banned', 'username', 'eve'),
+        '127.0.0.1', '2026-06-22 12:47:30.000'
+    ),
+    (
+        6002, 1001, 'approve_article', 'article', 2009,
+        JSON_OBJECT('title', '从 log.Println 到 slog：Go 结构化日志入门'),
+        '127.0.0.1', '2026-06-22 17:58:57.000'
+    ),
+    (
+        6003, 1001, 'change_role', 'user', 1005,
+        JSON_OBJECT('role', 'user'),
+        '127.0.0.1', '2026-06-22 18:27:08.000'
+    );
+
 COMMIT;
 
 -- 将自增值保持在高位，避免与种子数据的固定 ID 冲突。
@@ -714,3 +739,4 @@ ALTER TABLE tags AUTO_INCREMENT = 1100;
 ALTER TABLE articles AUTO_INCREMENT = 2200;
 ALTER TABLE comments AUTO_INCREMENT = 4000;
 ALTER TABLE notifications AUTO_INCREMENT = 6000;
+ALTER TABLE audit_logs AUTO_INCREMENT = 7000;
