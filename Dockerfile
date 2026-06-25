@@ -23,9 +23,8 @@ WORKDIR /app
 COPY --from=builder /out/server /app/server
 COPY config.yaml /app/config.yaml
 COPY web /app/web
-COPY image /app/image
 
-RUN mkdir -p /app/uploads \
+RUN mkdir -p /app/uploads/articles /app/uploads/avatars \
     && chown -R app:app /app/uploads
 
 USER app

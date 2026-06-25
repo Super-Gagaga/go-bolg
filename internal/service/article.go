@@ -292,7 +292,7 @@ func (s *ArticleService) Ranking(ctx context.Context, period string, limit int) 
 }
 
 func (s *ArticleService) UploadArticleImage(ctx context.Context, file io.Reader, filename string, size int64) (string, error) {
-	return upload.SaveImage("image", file, filename, size)
+	return upload.SaveImage("uploads/articles", file, filename, size)
 }
 
 func (s *ArticleService) requireAuthor(userID, articleID int64) (*model.Article, error) {

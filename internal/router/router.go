@@ -37,7 +37,6 @@ func New(cfg *config.Config, db *gorm.DB, redisClient *redis.Client, logger *zap
 	myProfilePage := webFilePath("my-profile.html")
 	adminPage := webFilePath("admin.html")
 	adminLoginPage := webFilePath("admin-login.html")
-	r.Static("/image", "./image")
 	r.Static("/uploads", "./uploads")
 	r.Static("/css", webFilePath("css"))
 	r.Static("/js", webFilePath("js"))
