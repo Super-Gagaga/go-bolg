@@ -16,7 +16,29 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 }
 
 func (r *UserRepository) Create(user *model.User) error {
-	return r.db.Create(user).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var lockAcquired int
+		if err := tx.Raw("SELECT GET_LOCK(?, 10)", "go-bolg:first-user-registration").
+			Scan(&lockAcquired).Error; err != nil {
+			return err
+		}
+		if lockAcquired != 1 {
+			return errors.New("failed to acquire user registration lock")
+		}
+		defer tx.Exec("SELECT RELEASE_LOCK(?)", "go-bolg:first-user-registration")
+
+		var userCount int64
+		if err := tx.Unscoped().Model(&model.User{}).Count(&userCount).Error; err != nil {
+			return err
+		}
+		if userCount == 0 {
+			user.Role = "admin"
+		} else {
+			user.Role = "user"
+		}
+
+		return tx.Create(user).Error
+	})
 }
 
 func (r *UserRepository) FindByEmail(email string) (*model.User, error) {

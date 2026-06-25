@@ -230,14 +230,3 @@ INSERT INTO tags (name) VALUES
     ('gorm'),
     ('mysql'),
     ('redis');
-
-INSERT INTO users (
-    id, username, email, password, avatar, bio, role, status,
-    article_count, follower_count, following_count, created_at, updated_at
-) VALUES(
-    1001, 'admin', 'admin@example.com',
-    '$2b$10$zXc2E/7tSgBpze6cTb6JZ.oZCVuL64xJAhlJBOg.qEhMvhPJ2q3N2',
-    'https://api.dicebear.com/7.x/initials/svg?seed=Admin',
-    '平台管理员，负责内容发布审核。', 'admin', 'active',
-    1, 1, 2, '2026-06-15 00:00:00.000', '2026-06-22 02:14:43.000'
-);

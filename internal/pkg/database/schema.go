@@ -25,5 +25,25 @@ func EnsureRuntimeSchema(db *gorm.DB) error {
 		}
 	}
 
+	if migrator.HasTable(&model.User{}) {
+		result := db.Exec(`
+			UPDATE users
+			SET role = 'admin'
+			WHERE id = (
+				SELECT id
+				FROM (
+					SELECT id
+					FROM users
+					ORDER BY created_at ASC, id ASC
+					LIMIT 1
+				) AS first_user
+			)
+			AND role <> 'admin'
+		`)
+		if result.Error != nil {
+			return fmt.Errorf("promote first registered user: %w", result.Error)
+		}
+	}
+
 	return nil
 }
