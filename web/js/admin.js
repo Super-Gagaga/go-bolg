@@ -12,7 +12,7 @@ async function api(path, options = {}) {
   if (!res.ok || body.code !== 0) throw new Error(body.message || `请求失败 ${res.status}`);
   return body.data;
 }
-function setTitle(label, title) { $('#view-label').textContent = label; $('#view-title').textContent = title; }
+function setTitle(_label, title) { $('#view-title').textContent = title; }
 function table(head, rows) {
   return `<div class="table-wrap"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('') || `<tr><td colspan="${head.length}"><div class="empty">暂无数据</div></td></tr>`}</tbody></table></div>`;
 }
