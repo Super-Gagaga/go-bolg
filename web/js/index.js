@@ -498,7 +498,7 @@ document.addEventListener('click', async event => {
       openLoginModal();
       return;
     }
-    const pages = { following: '/following', notifications: '/notifications', editor: '/editor' };
+    const pages = { following: '/following', notifications: '/notifications', favorites: '/favorites', editor: '/editor' };
     window.location.href = pages[navLink.dataset.nav] || '/';
     return;
   }
